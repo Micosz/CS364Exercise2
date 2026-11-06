@@ -1,0 +1,39 @@
+<?xml version="1.0" ?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent" android:id="@+id/root" android:padding="16dp" android:orientation="vertical" android:background="#F5F6EF">
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="StepByStep" android:textSize="28sp" android:textColor="#183831" android:textStyle="bold"/>
+    <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+        <Button android:id="@+id/trackTab" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_weight="1" android:text="กิจกรรม" android:textAllCaps="false"/>
+        <Button android:id="@+id/historyTab" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_weight="1" android:text="ประวัติ" android:textAllCaps="false"/>
+    </LinearLayout>
+    <ScrollView android:id="@+id/tracking" android:layout_width="match_parent" android:layout_height="match_parent" android:fillViewport="true">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical">
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="พร้อมเริ่มกิจกรรม" android:textSize="20sp" android:textColor="#183831" android:id="@+id/state" android:textStyle="bold" android:layout_marginTop="16dp"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/card" android:padding="16dp" android:layout_marginTop="12dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="เวลาของรอบนี้" android:textSize="14sp" android:textColor="#183831"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="00:00" android:textSize="38sp" android:textColor="#183831" android:id="@+id/elapsed" android:textStyle="bold"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="horizontal">
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ก้าวเดิน" android:textSize="15sp" android:textColor="#183831"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textSize="38sp" android:textColor="#183831" android:id="@+id/steps" android:textStyle="bold"/>
+                    </LinearLayout>
+                    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:orientation="vertical">
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ครั้งที่เขย่า" android:textSize="15sp" android:textColor="#183831"/>
+                        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="0" android:textSize="38sp" android:textColor="#183831" android:id="@+id/shakes" android:textStyle="bold"/>
+                    </LinearLayout>
+                </LinearLayout>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textSize="13sp" android:textColor="#183831" android:id="@+id/sensors"/>
+            </LinearLayout>
+            <Button android:layout_width="match_parent" android:layout_height="wrap_content" android:id="@+id/action" android:layout_marginTop="12dp" android:minHeight="52dp" android:text="เริ่มกิจกรรม" android:textColor="#FFFFFF" android:backgroundTint="#18614C"/>
+            <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:background="@drawable/card" android:padding="16dp" android:layout_marginTop="12dp">
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textSize="16sp" android:textColor="#183831" android:id="@+id/rates"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textSize="16sp" android:textColor="#183831" android:id="@+id/totals"/>
+                <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textSize="16sp" android:textColor="#183831" android:id="@+id/record" android:textStyle="bold"/>
+            </LinearLayout>
+        </LinearLayout>
+    </ScrollView>
+    <LinearLayout android:id="@+id/history" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:visibility="gone">
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ประวัติกิจกรรม" android:textSize="22sp" android:textColor="#183831" android:textStyle="bold" android:layout_marginTop="12dp"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textSize="16sp" android:textColor="#183831" android:id="@+id/empty" android:paddingTop="12dp"/>
+        <androidx.recyclerview.widget.RecyclerView android:id="@+id/list" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
+    </LinearLayout>
+</LinearLayout>
