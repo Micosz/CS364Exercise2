@@ -19,49 +19,70 @@ final class ShakeDetector implements SensorEventListener {
     private int count;
 
     ShakeDetector(Context context, Runnable changed) {
-        sensors = context.getSystemService(SensorManager.class);
-        accelerometer = sensors.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+        SensorManager sm = context != null ? context.getSystemService(SensorManager.class) : null;
+        sensors = sm;
+        accelerometer = sm != null ? sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER) : null;
+        this.changed = changed;
+    }
+
+    ShakeDetector(SensorManager sensors, Sensor accelerometer, Runnable changed) {
+        this.sensors = sensors;
+        this.accelerometer = accelerometer;
         this.changed = changed;
     }
 
     void resume() {
-        if (!listening && accelerometer != null) {
+        if (!listening && accelerometer != null && sensors != null) {
             armed = true;
             listening = sensors.registerListener(this, accelerometer, SensorManager.SENSOR_DELAY_GAME);
         }
     }
 
     void pause() {
-        sensors.unregisterListener(this);
+        if (sensors != null) sensors.unregisterListener(this);
         listening = false;
     }
 
     void setRound(boolean active, int count) {
+        setRound(active, count, SystemClock.elapsedRealtimeNanos());
+    }
+
+    void setRound(boolean active, int count, long timestamp) {
         this.active = active;
         this.count = count;
         armed = true;
         lastShake = -MIN_GAP_NS;
-        roundStart = SystemClock.elapsedRealtimeNanos();
+        roundStart = timestamp;
     }
 
     @Override public void onSensorChanged(SensorEvent event) {
-        if (!listening || !active || event.timestamp < roundStart) return;
-        float x = event.values[0], y = event.values[1], z = event.values[2];
+        if (event == null || !listening) return;
+        if (event.sensor != null && event.sensor.getType() != Sensor.TYPE_ACCELEROMETER) return;
+        if (onReading(event.values[0], event.values[1], event.values[2], event.timestamp)) {
+            if (changed != null) changed.run();
+        }
+    }
+
+    boolean onReading(float x, float y, float z, long timestamp) {
+        if (!active || timestamp < roundStart) return false;
         double g = Math.sqrt(x * x + y * y + z * z) / SensorManager.GRAVITY_EARTH;
         if (g < RELEASE_G) armed = true;
         if (g >= TRIGGER_G && armed) {
             armed = false;
-            if (event.timestamp - lastShake >= MIN_GAP_NS) {
+            if (timestamp - lastShake >= MIN_GAP_NS) {
                 count++;
-                lastShake = event.timestamp;
-                changed.run();
+                lastShake = timestamp;
+                return true;
             }
         }
+        return false;
     }
 
     @Override public void onAccuracyChanged(Sensor sensor, int accuracy) {}
     int count() { return count; }
     boolean needsPermission() { return false; }
+    void setListening(boolean listening) { this.listening = listening; }
+    boolean isListening() { return listening; }
 
     String status() {
         if (accelerometer == null) return "เครื่องนี้ไม่มีเซนเซอร์ตรวจจับการเขย่า";
