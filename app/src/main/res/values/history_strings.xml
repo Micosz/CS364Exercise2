@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="history_title">ประวัติกิจกรรม</string>
+    <string name="history_empty">ยังไม่มีประวัติกิจกรรม\nเริ่มและบันทึกกิจกรรม แล้วกลับมาดูประวัติที่นี่</string>
+    <string name="history_counts">%1$d ก้าว · เขย่า %2$d ครั้ง</string>
+    <string name="history_duration_value">%1$d นาที %2$02d วินาที</string>
+    <string name="history_duration">ระยะเวลา %1$s</string>
+    <string name="history_started_at">เริ่มกิจกรรม %1$s</string>
+    <string name="history_open_details">แตะเพื่อดูรายละเอียด</string>
+    <string name="history_row_description">%1$s, %2$s, %3$s, แตะเพื่อดูรายละเอียด</string>
+    <string name="history_detail_title">รายละเอียดกิจกรรม</string>
+    <string name="history_detail_metrics">ระยะเวลา %1$s\nก้าวเดิน %2$d ก้าว\nเขย่า %3$d ครั้ง</string>
+    <string name="history_close">ปิด</string>
+    <string name="history_delete">ลบกิจกรรม</string>
+    <string name="history_confirm_delete_title">ลบกิจกรรมนี้?</string>
+    <string name="history_confirm_delete_message">กิจกรรมนี้จะถูกลบออกจากประวัติ</string>
+    <string name="history_cancel">ยกเลิก</string>
+    <string name="history_confirm_delete">ลบ</string>
+    <string name="history_deleted">ลบกิจกรรมแล้ว</string>
+    <string name="history_not_found">ไม่พบกิจกรรมนี้ในประวัติ</string>
+    <string name="history_delete_failed">ลบไม่สำเร็จ กรุณาลองอีกครั้ง</string>
+</resources>
