@@ -8,14 +8,16 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Build;
+import android.os.SystemClock;
 
 final class StepCounterManager implements SensorEventListener {
     private final Context context;
     private final SensorManager sensors;
     private final Sensor counter;
     private final Runnable changed;
-    private boolean listening;
+    private boolean listening, active;
     private int previous = -1, count;
+    private long roundStart;
 
     StepCounterManager(Context context, Runnable changed) {
         this.context = context;
@@ -44,13 +46,18 @@ final class StepCounterManager implements SensorEventListener {
     }
 
     void setRound(boolean active, int count) {
+        this.active = active;
         this.count = count;
+        roundStart = SystemClock.elapsedRealtimeNanos();
     }
 
     @Override public void onSensorChanged(SensorEvent event) {
         if (!listening || event.sensor.getType() != Sensor.TYPE_STEP_COUNTER) return;
         int total = (int) event.values[0];
         // On first registration the hardware reports its cumulative count since boot.
+        if (active && event.timestamp >= roundStart && previous >= 0 && total > previous) {
+            count += total - previous;
+        }
         previous = total;
         changed.run();
     }
