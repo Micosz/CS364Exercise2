@@ -10,14 +10,14 @@ import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.SystemClock;
 
-final class StepCounterManager implements SensorEventListener {
+final class StepCounterManager {
     private final Context context;
     private final SensorManager sensors;
     private final Sensor counter;
     private final Runnable changed;
-    private boolean listening, active;
-    private int previous = -1, count;
-    private long roundStart;
+    private final StepSessionCounter session = new StepSessionCounter();
+    private boolean listening;
+    private SensorEventListener listener;
 
     StepCounterManager(Context context, Runnable changed) {
         this.context = context;
@@ -34,41 +34,60 @@ final class StepCounterManager implements SensorEventListener {
 
     void resume() {
         if (!listening && counter != null && !needsPermission()) {
-            previous = -1;
-            listening = sensors.registerListener(this, counter, SensorManager.SENSOR_DELAY_NORMAL);
+            session.resetBaseline(SystemClock.elapsedRealtimeNanos());
+            SensorEventListener next = new SensorEventListener() {
+                private boolean initial = true;
+
+                @Override public void onSensorChanged(SensorEvent event) {
+                    // Callbacks queued for an earlier registration are obsolete.
+                    if (!listening || listener != this
+                            || event.sensor.getType() != Sensor.TYPE_STEP_COUNTER) return;
+                    int total = (int) event.values[0];
+                    if (initial) {
+                        initial = false;
+                        session.establishBaseline(total, event.timestamp);
+                    } else {
+                        session.onReading(total, event.timestamp);
+                    }
+                    changed.run();
+                }
+
+                @Override public void onAccuracyChanged(Sensor sensor, int accuracy) {}
+            };
+            listener = next;
+            try {
+                listening = sensors.registerListener(next, counter, SensorManager.SENSOR_DELAY_NORMAL);
+            } catch (SecurityException e) {
+                // Permission may be revoked between checking it and registering.
+                listening = false;
+            }
+            if (!listening) listener = null;
         }
     }
 
     void pause() {
-        sensors.unregisterListener(this);
+        SensorEventListener previous = listener;
+        listener = null;
         listening = false;
-        previous = -1;
+        if (previous != null) sensors.unregisterListener(previous);
+        session.resetBaseline(SystemClock.elapsedRealtimeNanos());
     }
 
     void setRound(boolean active, int count) {
-        this.active = active;
-        this.count = count;
-        roundStart = SystemClock.elapsedRealtimeNanos();
+        boolean restart = listening;
+        if (restart) pause();
+        session.setRound(active, count, SystemClock.elapsedRealtimeNanos());
+        // Re-register to request the on-change sensor's current cumulative value,
+        // instead of carrying a reading taken during the previous/idle round.
+        if (restart) resume();
     }
 
-    @Override public void onSensorChanged(SensorEvent event) {
-        if (!listening || event.sensor.getType() != Sensor.TYPE_STEP_COUNTER) return;
-        int total = (int) event.values[0];
-        // On first registration the hardware reports its cumulative count since boot.
-        if (active && event.timestamp >= roundStart && previous >= 0 && total > previous) {
-            count += total - previous;
-        }
-        previous = total;
-        changed.run();
-    }
-
-    @Override public void onAccuracyChanged(Sensor sensor, int accuracy) {}
-    int count() { return count; }
+    int count() { return session.count(); }
 
     String status() {
         if (counter == null) return "เครื่องนี้ไม่มีเซนเซอร์นับก้าว";
         if (needsPermission()) return "นับก้าวได้เมื่ออนุญาตการตรวจจับกิจกรรม";
         if (!listening) return "เซนเซอร์นับก้าวยังไม่พร้อม";
-        return previous < 0 ? "กำลังรอค่าเริ่มต้นจากเซนเซอร์ก้าว" : "";
+        return session.waitingForBaseline() ? "กำลังเตรียมตัวนับก้าว กรุณารอค่าตั้งต้นก่อนเดิน" : "";
     }
 }

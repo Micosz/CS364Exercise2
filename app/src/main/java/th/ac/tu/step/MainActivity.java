@@ -29,7 +29,7 @@ public final class MainActivity extends Activity {
     private ActivityAdapter history;
     private SessionPanel panel;
     private List<ActivitySession> rows;
-    private boolean active, historyOpen;
+    private boolean active, historyOpen, foreground;
     private long startedAt, accumulated, runningSince = -1;
     private TextView state, stepText, shakeText, sensorText;
     private Button action;
@@ -155,6 +155,7 @@ public final class MainActivity extends Activity {
 
     @Override protected void onResume() {
         super.onResume();
+        foreground = true;
         if (active) runningSince = SystemClock.elapsedRealtime();
         steps.resume();
         shakes.resume();
@@ -162,6 +163,7 @@ public final class MainActivity extends Activity {
     }
 
     @Override protected void onPause() {
+        foreground = false;
         accumulated = elapsed();
         runningSince = -1;
         clock.removeCallbacks(tick);
@@ -182,7 +184,7 @@ public final class MainActivity extends Activity {
 
     @Override public void onRequestPermissionsResult(int code, String[] permissions, int[] results) {
         super.onRequestPermissionsResult(code, permissions, results);
-        if (code == 41 && hasWindowFocus()) steps.resume();
+        if (code == 41 && foreground) steps.resume();
         render();
     }
 
