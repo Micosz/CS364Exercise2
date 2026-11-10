@@ -36,7 +36,17 @@ jobs:
           yes | "$sdkmanager_bin" --sdk_root="$ANDROID_HOME" --licenses >/dev/null
           set -o pipefail
           "$sdkmanager_bin" --sdk_root="$ANDROID_HOME" "$image" emulator platform-tools
-          printf 'no\n' | "$avdmanager_bin" create avd --force --name sqliteHistory --package "$image"
+          export ANDROID_USER_HOME="$RUNNER_TEMP/sqlite-history-android"
+          export ANDROID_EMULATOR_HOME="$ANDROID_USER_HOME"
+          export ANDROID_AVD_HOME="$ANDROID_USER_HOME/avd"
+          mkdir -p "$ANDROID_AVD_HOME"
+          avd_path="$ANDROID_AVD_HOME/sqliteHistory.avd"
+          printf 'no\n' | "$avdmanager_bin" create avd --force --name sqliteHistory --package "$image" --path "$avd_path"
+          test -f "$avd_path/config.ini"
+          if [[ ! -f "$ANDROID_AVD_HOME/sqliteHistory.ini" ]]; then
+            printf 'avd.ini.encoding=UTF-8\npath=%s\ntarget=android-35\n' "$avd_path" > "$ANDROID_AVD_HOME/sqliteHistory.ini"
+          fi
+          "$ANDROID_HOME/emulator/emulator" -list-avds | grep -Fx sqliteHistory
           adb start-server
           export ANDROID_SERIAL=emulator-5554
           "$ANDROID_HOME/emulator/emulator" -avd sqliteHistory -port 5554 -no-window -noaudio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > build/sqlite-history/emulator.log 2>&1 &
