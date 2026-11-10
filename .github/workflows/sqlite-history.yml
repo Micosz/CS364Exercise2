@@ -1,0 +1,52 @@
+name: SQLite and history integration
+on:
+  push:
+    branches: ['test/sqliteandhistory']
+permissions:
+  contents: read
+jobs:
+  integration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - name: Build debug APK and run unit tests
+        run: ./gradlew --no-daemon assembleDebug testDebugUnitTest
+      - name: Exercise SQLite and history on Android
+        shell: bash
+        run: |
+          mkdir -p build/sqlite-history
+          test -e /dev/kvm
+          sudo chmod a+rw /dev/kvm
+          image='system-images;android-35;google_apis;x86_64'
+          sdkmanager "$image"
+          printf 'no\n' | avdmanager create avd --force --name sqliteHistory --package "$image"
+          "$ANDROID_HOME/emulator/emulator" -avd sqliteHistory -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > build/sqlite-history/emulator.log 2>&1 &
+          emulator_pid=$!
+          trap 'adb logcat -d -t 1200 > build/sqlite-history/logcat.txt || true; adb emu kill || true; kill "$emulator_pid" 2>/dev/null || true' EXIT
+          timeout 90 adb wait-for-device
+          booted=
+          for attempt in {1..100}; do
+            if [[ "$(adb shell getprop sys.boot_completed | tr -d '\r')" == 1 ]]; then
+              booted=yes
+              break
+            fi
+            sleep 2
+          done
+          test "$booted" = yes
+          adb shell input keyevent 82
+          adb shell wm size 720x1280
+          adb shell wm density 240
+          adb shell settings put system screen_off_timeout 600000
+          adb install -g app/build/outputs/apk/debug/app-debug.apk
+          python3 .github/scripts/sqlite_history_smoke.py
+      - name: Save diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: sqlite-history-diagnostics
+          path: build/sqlite-history/
