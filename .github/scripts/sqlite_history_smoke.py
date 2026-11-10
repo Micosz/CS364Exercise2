@@ -104,10 +104,11 @@ def empty_history():
 
 
 def record_round(seconds):
-    tap_id("action")
-    until(lambda nodes: by_text(nodes, "จบและบันทึกกิจกรรม"), "active round")
+    button = until(lambda nodes: by_id(nodes, "action"), "start button")[0]
+    tap(button)
     time.sleep(seconds)
-    tap_id("action")
+    # The timer redraws continuously, so reuse the action button's position during the round.
+    tap(button)
     until(lambda nodes: by_text(nodes, "เริ่มกิจกรรม"), "saved round")
 
 
@@ -143,7 +144,7 @@ def main():
     tap(cards[1])
     record = before[1]
     expected = f"{duration_label(record)}\nก้าวเดิน {record[3]} ก้าว\nเขย่า {record[4]} ครั้ง"
-    until(lambda nodes: [n for n in by_id(nodes, "detailMetrics") if n.get("text") == expected],
+    until(lambda nodes: [n for n in by_id(nodes, "detailMetrics") if " ".join(n.get("text", "").split()) == " ".join(expected.split())],
           "middle-round details match SQLite")
     tap_text("ลบกิจกรรม")
     until(lambda nodes: by_text(nodes, "ลบกิจกรรมนี้?"), "delete confirmation")

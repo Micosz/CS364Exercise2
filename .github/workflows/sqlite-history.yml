@@ -7,7 +7,7 @@ permissions:
 jobs:
   integration:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 9
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -37,19 +37,31 @@ jobs:
           set -o pipefail
           "$sdkmanager_bin" --sdk_root="$ANDROID_HOME" "$image" emulator platform-tools
           printf 'no\n' | "$avdmanager_bin" create avd --force --name sqliteHistory --package "$image"
-          "$ANDROID_HOME/emulator/emulator" -avd sqliteHistory -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > build/sqlite-history/emulator.log 2>&1 &
+          adb start-server
+          export ANDROID_SERIAL=emulator-5554
+          "$ANDROID_HOME/emulator/emulator" -avd sqliteHistory -port 5554 -no-window -noaudio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > build/sqlite-history/emulator.log 2>&1 &
           emulator_pid=$!
-          trap 'adb logcat -d -t 1200 > build/sqlite-history/logcat.txt || true; adb emu kill || true; kill "$emulator_pid" 2>/dev/null || true' EXIT
-          timeout 90 adb wait-for-device
+          finish() {
+            local result=$?
+            if [[ "$result" != 0 ]]; then
+              tail -100 build/sqlite-history/emulator.log || true
+              timeout 8 adb logcat -d -t 1200 > build/sqlite-history/logcat.txt 2>&1 || true
+            fi
+            timeout 5 adb emu kill || true
+            kill "$emulator_pid" 2>/dev/null || true
+          }
+          trap finish EXIT
           booted=
-          for attempt in {1..100}; do
-            if [[ "$(adb shell getprop sys.boot_completed | tr -d '\r')" == 1 ]]; then
+          for attempt in {1..75}; do
+            kill -0 "$emulator_pid" 2>/dev/null || { echo "Emulator exited before boot"; exit 1; }
+            if [[ "$(timeout 3 adb shell getprop sys.boot_completed 2>/dev/null | tr -d '\r')" == 1 ]]; then
               booted=yes
               break
             fi
             sleep 2
           done
-          test "$booted" = yes
+          [[ "$booted" == yes ]] || { echo "Android did not finish booting"; exit 1; }
+          echo "Android emulator is ready"
           adb shell input keyevent 82
           adb shell wm size 720x1280
           adb shell wm density 240
