@@ -22,9 +22,21 @@ jobs:
           mkdir -p build/sqlite-history
           test -e /dev/kvm
           sudo chmod a+rw /dev/kvm
+          export ANDROID_HOME="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          sdkmanager_bin="$(find "$ANDROID_HOME/cmdline-tools" -path '*/bin/sdkmanager' -type f 2>/dev/null | sort -V | tail -1 || true)"
+          if [[ -z "$sdkmanager_bin" ]]; then
+            curl -fsSL --retry 3 https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -o "$RUNNER_TEMP/android-tools.zip"
+            unzip -q "$RUNNER_TEMP/android-tools.zip" -d "$RUNNER_TEMP/android-tools"
+            sdkmanager_bin="$RUNNER_TEMP/android-tools/cmdline-tools/bin/sdkmanager"
+          fi
+          avdmanager_bin="$(dirname "$sdkmanager_bin")/avdmanager"
+          export PATH="$ANDROID_HOME/platform-tools:$PATH"
           image='system-images;android-35;google_apis;x86_64'
-          sdkmanager "$image"
-          printf 'no\n' | avdmanager create avd --force --name sqliteHistory --package "$image"
+          set +o pipefail
+          yes | "$sdkmanager_bin" --sdk_root="$ANDROID_HOME" --licenses >/dev/null
+          set -o pipefail
+          "$sdkmanager_bin" --sdk_root="$ANDROID_HOME" "$image" emulator platform-tools
+          printf 'no\n' | "$avdmanager_bin" create avd --force --name sqliteHistory --package "$image"
           "$ANDROID_HOME/emulator/emulator" -avd sqliteHistory -no-window -no-audio -no-boot-anim -no-snapshot -gpu swiftshader_indirect > build/sqlite-history/emulator.log 2>&1 &
           emulator_pid=$!
           trap 'adb logcat -d -t 1200 > build/sqlite-history/logcat.txt || true; adb emu kill || true; kill "$emulator_pid" 2>/dev/null || true' EXIT
