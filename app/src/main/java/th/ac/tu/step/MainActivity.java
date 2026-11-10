@@ -120,13 +120,16 @@ public final class MainActivity extends Activity {
     }
 
     private void confirmDelete(long id) {
-        new AlertDialog.Builder(this).setTitle("ลบกิจกรรมนี้?")
-            .setMessage("ยอดรวมและสถิติจะคำนวณใหม่จากกิจกรรมที่เหลือ")
-            .setNegativeButton("ยกเลิก", null).setPositiveButton("ลบ", (dialog, which) -> {
+        new AlertDialog.Builder(this).setTitle(R.string.history_confirm_delete_title)
+            .setMessage(R.string.history_confirm_delete_message)
+            .setNegativeButton(R.string.history_cancel, null)
+            .setPositiveButton(R.string.history_confirm_delete, (dialog, which) -> {
                 try {
-                    if (store.delete(id)) refresh();
+                    boolean deleted = store.delete(id);
+                    refresh();
+                    toast(getString(deleted ? R.string.history_deleted : R.string.history_not_found));
                 } catch (android.database.SQLException e) {
-                    toast("ลบไม่สำเร็จ กรุณาลองอีกครั้ง");
+                    toast(getString(R.string.history_delete_failed));
                 }
             }).show();
     }

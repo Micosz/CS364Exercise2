@@ -1,0 +1,84 @@
+{
+  "checks": [
+    "three recorded rounds appear in history",
+    "5, 10, 15 second rounds are newest first",
+    "round 1: date matches selected row",
+    "round 1: duration and counts match selected row",
+    "round 2: date matches selected row",
+    "round 2: duration and counts match selected row",
+    "round 3: date matches selected row",
+    "round 3: duration and counts match selected row",
+    "canceling middle-row deletion preserves all three rounds",
+    "confirming middle-row deletion preserves newest and oldest rounds",
+    "remaining round 1: date matches selected row",
+    "remaining round 1: duration and counts match selected row",
+    "remaining round 2: date matches selected row",
+    "remaining round 2: duration and counts match selected row",
+    "deleting all remaining rounds returns to empty state",
+    "eight rounds exceed the viewport and enable scrolling",
+    "scrolling reaches all eight distinct rounds",
+    "all eight rounds remain ordered after view recycling",
+    "last row after scrolling: date matches selected row",
+    "last row after scrolling: duration and counts match selected row",
+    "last history row remains reachable with large text in landscape",
+    "landscape last row: date matches selected row",
+    "landscape last row: duration and counts match selected row",
+    "landscape detail buttons remain available after scrolling a long list",
+    "large-text landscape details can scroll",
+    "detail metrics remain accessible after scrolling"
+  ],
+  "passed": 26,
+  "created_rounds": [
+    {
+      "requested_seconds": 5,
+      "saved_seconds": 5
+    },
+    {
+      "requested_seconds": 10,
+      "saved_seconds": 10
+    },
+    {
+      "requested_seconds": 15,
+      "saved_seconds": 15
+    },
+    {
+      "requested_seconds": 1,
+      "saved_seconds": 1
+    },
+    {
+      "requested_seconds": 2,
+      "saved_seconds": 2
+    },
+    {
+      "requested_seconds": 3,
+      "saved_seconds": 3
+    },
+    {
+      "requested_seconds": 4,
+      "saved_seconds": 4
+    },
+    {
+      "requested_seconds": 5,
+      "saved_seconds": 5
+    },
+    {
+      "requested_seconds": 6,
+      "saved_seconds": 6
+    },
+    {
+      "requested_seconds": 7,
+      "saved_seconds": 7
+    },
+    {
+      "requested_seconds": 8,
+      "saved_seconds": 8
+    }
+  ],
+  "status": "passed",
+  "device": {
+    "name": "Pixel 6a Emulator",
+    "android": "15",
+    "api": 35,
+    "test_date": "2026-11-10"
+  }
+}
