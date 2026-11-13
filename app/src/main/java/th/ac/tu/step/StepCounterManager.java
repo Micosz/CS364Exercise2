@@ -9,85 +9,133 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.SystemClock;
+import android.util.Log;
+import java.util.function.LongSupplier;
 
 final class StepCounterManager {
-    private final Context context;
-    private final SensorManager sensors;
-    private final Sensor counter;
+    interface ReadingListener { void onReading(int total, long timestamp); }
+
+    interface SensorSource {
+        boolean available();
+        boolean needsPermission();
+        boolean start(ReadingListener listener);
+        void stop();
+    }
+
+    private final SensorSource source;
+    private final LongSupplier now;
     private final Runnable changed;
     private final StepSessionCounter session = new StepSessionCounter();
     private boolean listening;
-    private SensorEventListener listener;
+    private long registration;
 
     StepCounterManager(Context context, Runnable changed) {
-        this.context = context;
-        this.changed = changed;
-        sensors = context.getSystemService(SensorManager.class);
-        counter = sensors.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
+        this(new AndroidSensorSource(context), SystemClock::elapsedRealtimeNanos, changed);
     }
 
-    boolean needsPermission() {
-        return counter != null && Build.VERSION.SDK_INT >= 29
-            && context.checkSelfPermission(Manifest.permission.ACTIVITY_RECOGNITION)
-               != PackageManager.PERMISSION_GRANTED;
+    // Use a controlled sensor in tests to verify the same lifecycle as the app.
+    StepCounterManager(SensorSource source, LongSupplier now, Runnable changed) {
+        this.source = source;
+        this.now = now;
+        this.changed = changed;
     }
+
+    boolean needsPermission() { return source.available() && source.needsPermission(); }
 
     void resume() {
-        if (!listening && counter != null && !needsPermission()) {
-            session.resetBaseline(SystemClock.elapsedRealtimeNanos());
-            SensorEventListener next = new SensorEventListener() {
-                private boolean initial = true;
-
-                @Override public void onSensorChanged(SensorEvent event) {
-                    // Callbacks queued for an earlier registration are obsolete.
-                    if (!listening || listener != this
-                            || event.sensor.getType() != Sensor.TYPE_STEP_COUNTER) return;
-                    int total = (int) event.values[0];
-                    if (initial) {
-                        initial = false;
-                        session.establishBaseline(total, event.timestamp);
-                    } else {
-                        session.onReading(total, event.timestamp);
-                    }
-                    changed.run();
-                }
-
-                @Override public void onAccuracyChanged(Sensor sensor, int accuracy) {}
-            };
-            listener = next;
-            try {
-                listening = sensors.registerListener(next, counter, SensorManager.SENSOR_DELAY_NORMAL);
-            } catch (SecurityException e) {
-                // Permission may be revoked between checking it and registering.
-                listening = false;
-            }
-            if (!listening) listener = null;
+        if (listening || !source.available() || needsPermission()) return;
+        session.resetBaseline(now.getAsLong());
+        long current = ++registration;
+        // Allow an initial reading even if a source delivers it during start().
+        listening = true;
+        try {
+            boolean registered = source.start((total, timestamp) -> {
+                if (!listening || registration != current) return;
+                session.onReading(total, timestamp);
+                changed.run();
+            });
+            if (registered) return;
+        } catch (SecurityException e) {
+            // Permission can be revoked between checking and registering.
         }
+        listening = false;
+        registration++;
+        source.stop();
+        session.resetBaseline(now.getAsLong());
     }
 
     void pause() {
-        SensorEventListener previous = listener;
-        listener = null;
         listening = false;
-        if (previous != null) sensors.unregisterListener(previous);
-        session.resetBaseline(SystemClock.elapsedRealtimeNanos());
+        registration++;
+        source.stop();
+        session.resetBaseline(now.getAsLong());
     }
 
     void setRound(boolean active, int count) {
-        boolean restart = listening;
-        if (restart) pause();
-        session.setRound(active, count, SystemClock.elapsedRealtimeNanos());
-        // Re-register to request the on-change sensor's current cumulative value,
-        // instead of carrying a reading taken during the previous/idle round.
-        if (restart) resume();
+        // Starting/stopping a round changes the count window, not registration.
+        // Keep the sensor's latest cumulative reading as the new round's base.
+        session.setRound(active, count, now.getAsLong());
     }
 
     int count() { return session.count(); }
 
+    boolean readyForRound() {
+        return !source.available()
+            || (listening && !needsPermission() && !session.waitingForBaseline());
+    }
+
     String status() {
-        if (counter == null) return "เครื่องนี้ไม่มีเซนเซอร์นับก้าว";
+        if (!source.available()) return "เครื่องนี้ไม่มีเซนเซอร์นับก้าว";
         if (needsPermission()) return "นับก้าวได้เมื่ออนุญาตการตรวจจับกิจกรรม";
         if (!listening) return "เซนเซอร์นับก้าวยังไม่พร้อม";
-        return session.waitingForBaseline() ? "กำลังเตรียมตัวนับก้าว กรุณารอค่าตั้งต้นก่อนเดิน" : "";
+        return session.waitingForBaseline() ? "กำลังรอค่าตั้งต้นจากเซนเซอร์นับก้าว" : "";
+    }
+
+    private static final class AndroidSensorSource implements SensorSource {
+        private static final String TAG = "StepCounter";
+        private final Context context;
+        private final SensorManager sensors;
+        private final Sensor counter;
+        private SensorEventListener listener;
+
+        AndroidSensorSource(Context context) {
+            this.context = context;
+            sensors = context.getSystemService(SensorManager.class);
+            counter = sensors.getDefaultSensor(Sensor.TYPE_STEP_COUNTER);
+        }
+
+        @Override public boolean available() { return counter != null; }
+
+        @Override public boolean needsPermission() {
+            return Build.VERSION.SDK_INT >= 29
+                && context.checkSelfPermission(Manifest.permission.ACTIVITY_RECOGNITION)
+                    != PackageManager.PERMISSION_GRANTED;
+        }
+
+        @Override public boolean start(ReadingListener readings) {
+            listener = new SensorEventListener() {
+                @Override public void onSensorChanged(SensorEvent event) {
+                    if (event.sensor.getType() != Sensor.TYPE_STEP_COUNTER) return;
+                    Log.d(TAG, "raw=" + event.values[0] + " timestamp=" + event.timestamp);
+                    readings.onReading((int) event.values[0], event.timestamp);
+                }
+
+                @Override public void onAccuracyChanged(Sensor sensor, int accuracy) {}
+            };
+            try {
+                boolean registered = sensors.registerListener(listener, counter,
+                    SensorManager.SENSOR_DELAY_NORMAL);
+                Log.i(TAG, "register=" + registered + " sensor=" + counter.getName());
+                return registered;
+            } catch (SecurityException e) {
+                Log.w(TAG, "Activity recognition permission denied", e);
+                throw e;
+            }
+        }
+
+        @Override public void stop() {
+            if (listener != null) sensors.unregisterListener(listener);
+            listener = null;
+        }
     }
 }

@@ -9,7 +9,9 @@ final class StepSessionCounter {
     void setRound(boolean active, int count, long timestamp) {
         this.active = active;
         this.count = count;
-        resetBaseline(timestamp);
+        acceptFrom = timestamp;
+        // Keep the live sensor's latest cumulative value. Resetting it here would
+        // discard the first walking batch if no new initial event is delivered.
     }
 
     void resetBaseline(long timestamp) {
@@ -18,21 +20,15 @@ final class StepSessionCounter {
         lastTimestamp = Long.MIN_VALUE;
     }
 
-    void establishBaseline(int total, long timestamp) {
-        if (total < 0) return;
-        // An on-change sensor supplies its current value at registration. The
-        // cached sample can predate registration when the user is standing still.
-        previous = total;
-        lastTimestamp = timestamp;
-    }
-
     void onReading(int total, long timestamp) {
-        // Queued readings from before this round/resume must not change its baseline.
-        if (total < 0 || timestamp < acceptFrom || timestamp <= lastTimestamp) return;
-        lastTimestamp = timestamp;
-        if (active && previous >= 0 && total > previous) count += total - previous;
-        // The first reading establishes a baseline. A sensor reset also re-bases here.
+        if (total < 0 || timestamp <= lastTimestamp) return;
+        if (active && timestamp >= acceptFrom && previous >= 0 && total > previous) {
+            count += total - previous;
+        }
+        // An ordered pre-round sample delivered late is still a newer baseline,
+        // but contributes no steps. Older/duplicate samples were rejected above.
         previous = total;
+        lastTimestamp = timestamp;
     }
 
     int count() { return count; }
