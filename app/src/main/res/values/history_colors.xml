@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="history_text_primary">#183831</color>
+    <color name="history_text_secondary">#486359</color>
+</resources>

@@ -32,8 +32,8 @@
         </LinearLayout>
     </ScrollView>
     <LinearLayout android:id="@+id/history" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:visibility="gone">
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="ประวัติกิจกรรม" android:textSize="22sp" android:textColor="#183831" android:textStyle="bold" android:layout_marginTop="12dp"/>
-        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="" android:textSize="16sp" android:textColor="#183831" android:id="@+id/empty" android:paddingTop="12dp"/>
-        <androidx.recyclerview.widget.RecyclerView android:id="@+id/list" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"/>
+        <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/history_title" android:textSize="22sp" android:textColor="@color/history_text_primary" android:textStyle="bold" android:layout_marginTop="12dp"/>
+        <TextView android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:text="@string/history_empty" android:textSize="16sp" android:textColor="@color/history_text_secondary" android:id="@+id/empty" android:gravity="center" android:padding="24dp" android:lineSpacingExtra="4dp" android:accessibilityLiveRegion="polite"/>
+        <androidx.recyclerview.widget.RecyclerView android:id="@+id/list" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:paddingTop="8dp" android:paddingBottom="16dp" android:clipToPadding="false"/>
     </LinearLayout>
 </LinearLayout>
