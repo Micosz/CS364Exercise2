@@ -82,6 +82,15 @@ public final class MainActivity extends Activity {
     }
 
     private void startRound() {
+        if (Build.VERSION.SDK_INT >= 29 && steps.needsPermission()) {
+            requestPermissions(new String[]{Manifest.permission.ACTIVITY_RECOGNITION}, 41);
+            return;
+        }
+        steps.resume();
+        if (!steps.readyForRound()) {
+            toast("กำลังรอค่าตั้งต้น กรุณาเดินเตรียมเล็กน้อย รอเซนเซอร์พร้อม แล้วกดเริ่มอีกครั้ง");
+            return;
+        }
         active = true;
         accumulated = 0;
         startedAt = System.currentTimeMillis();
@@ -90,9 +99,6 @@ public final class MainActivity extends Activity {
         shakes.setRound(true, 0);
         clock.removeCallbacks(tick);
         tick.run();
-        if (Build.VERSION.SDK_INT >= 29 && steps.needsPermission()) {
-            requestPermissions(new String[]{Manifest.permission.ACTIVITY_RECOGNITION}, 41);
-        }
     }
 
     private long elapsed() {
